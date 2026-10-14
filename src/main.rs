@@ -1,39 +1,35 @@
-/// Evaluates whether the starship's outer airlock door can be safely opened.
+/// Represents the current sensor and control states of the starship airlock.
+pub struct AirlockState {
+    pub main_power: bool,
+    pub backup_power: bool,
+    pub captain_override: bool,
+    pub life_support_failure: bool,
+    pub officer_a: bool,
+    pub officer_b: bool,
+    pub high_external_pressure: bool,
+    pub inner_door_open: bool,
+}
+
+/// Evaluates whether the starship's outer airlock door can be safely opened
+/// based on the provided `AirlockState`.
 ///
 /// # Arguments
-/// * `main_power` - Status of the primary power grid (bool)
-/// * `backup_power` - Status of the backup power grid (bool)
-/// * `captain_override` - Manual override triggered by the captain (bool)
-/// * `life_support_failure` - Critical failure flag from life support (bool)
-/// * `officer_a` - Presence of security officer A (bool)
-/// * `officer_b` - Presence of security officer B (bool)
-/// * `high_external_pressure` - High pressure detected outside the airlock (bool)
-/// * `inner_door_open` - Status of the inner airlock door (bool)
+/// * `state` - A reference to an `AirlockState` struct containing all sensor readings.
 ///
 /// # Returns
 /// * `true` if the airlock can open safely, `false` otherwise.
-fn can_open_airlock(
-    main_power: bool,
-    backup_power: bool,
-    captain_override: bool,
-    life_support_failure: bool,
-    officer_a: bool,
-    officer_b: bool,
-    high_external_pressure: bool,
-    inner_door_open: bool,
-) -> bool {
+fn can_open_airlock(state: &AirlockState) -> bool {
     // 1. NAND Lockout: Prevent opening if high pressure AND inner door are open simultaneously.
-    // Logic: !(A && B)
-    let safety_lockout = !(high_external_pressure && inner_door_open);
+    let safety_lockout = !(state.high_external_pressure && state.inner_door_open);
 
     // 2. Dual Authorization (XOR): Exactly one security officer must be present.
-    let dual_auth = officer_a != officer_b;
+    let dual_auth = state.officer_a != state.officer_b;
 
     // 3. Power Condition (AND): Both primary and backup power must be active.
-    let power_ok = main_power && backup_power;
+    let power_ok = state.main_power && state.backup_power;
 
     // 4. Emergency Override (OR): Captain override or life support failure.
-    let emergency = captain_override || life_support_failure;
+    let emergency = state.captain_override || state.life_support_failure;
 
     // The safety lockout is mandatory in all scenarios.
     // In an emergency, safety_lockout is sufficient. Otherwise, power and dual_auth are required.
@@ -43,7 +39,53 @@ fn can_open_airlock(
 fn main() {
     println!("--- Starship Airlock Security System ---");
 
-    // Test the function
-    let result = can_open_airlock(true, true, false, false, true, false, false, false);
+    // Initialize the state cleanly using struct syntax
+    let normal_state = AirlockState {
+        main_power: true,
+        backup_power: true,
+        captain_override: false,
+        life_support_failure: false,
+        officer_a: true,
+        officer_b: false,
+        high_external_pressure: false,
+        inner_door_open: false,
+    };
+
+    let result = can_open_airlock(&normal_state);
     println!("Can open airlock? {}", result);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_normal_operation_success() {
+        let state = AirlockState {
+            main_power: true,
+            backup_power: true,
+            captain_override: false,
+            life_support_failure: false,
+            officer_a: true,
+            officer_b: false,
+            high_external_pressure: false,
+            inner_door_open: false,
+        };
+        assert_eq!(can_open_airlock(&state), true);
+    }
+
+    #[test]
+    fn test_safety_lockout_blocks_everything() {
+        let state = AirlockState {
+            main_power: true,
+            backup_power: true,
+            captain_override: true,
+            life_support_failure: false,
+            officer_a: true,
+            officer_b: false,
+            high_external_pressure: true, // Danger!
+            inner_door_open: true,  // Danger!
+        };
+        assert_eq!(can_open_airlock(&state), false);
+    }
 }
