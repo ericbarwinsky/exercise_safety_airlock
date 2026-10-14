@@ -36,8 +36,17 @@ fn can_open_airlock(
     // 4. Emergency Override (OR): Captain override or life support failure.
     let emergency = captain_override || life_support_failure;
 
-    // TODO: Implement the final boolean logic combining these rules using if/else statements
-    false
+    // If there's an emergency, bypass standard checks
+    if emergency {
+        return true && safety_lockout; // Emergency still respects the safety NAND lockout
+    }
+
+    // Standard protocol: requires power, dual authorization, and safety lockout
+    if power_ok && dual_auth && safety_lockout {
+        true
+    } else {
+        false
+    }
 }
 
 fn main() {
