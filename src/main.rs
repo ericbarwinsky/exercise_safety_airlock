@@ -27,7 +27,6 @@ fn can_open_airlock(
     let safety_lockout = !(high_external_pressure && inner_door_open);
 
     // 2. Dual Authorization (XOR): Exactly one security officer must be present.
-    // Logic: officer_a != officer_b
     let dual_auth = officer_a != officer_b;
 
     // 3. Power Condition (AND): Both primary and backup power must be active.
@@ -36,17 +35,9 @@ fn can_open_airlock(
     // 4. Emergency Override (OR): Captain override or life support failure.
     let emergency = captain_override || life_support_failure;
 
-    // If there's an emergency, bypass standard checks
-    if emergency {
-        return true && safety_lockout; // Emergency still respects the safety NAND lockout
-    }
-
-    // Standard protocol: requires power, dual authorization, and safety lockout
-    if power_ok && dual_auth && safety_lockout {
-        true
-    } else {
-        false
-    }
+    // The safety lockout is mandatory in all scenarios.
+    // In an emergency, safety_lockout is sufficient. Otherwise, power and dual_auth are required.
+    safety_lockout && (emergency || (power_ok && dual_auth))
 }
 
 fn main() {
